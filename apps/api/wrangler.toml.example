@@ -1,0 +1,15 @@
+name = "yamaha-router-watch-api"
+main = "src/index.ts"
+compatibility_date = "2026-04-30"
+
+# Copy this file to wrangler.toml and set your own database_id.
+# Do not commit wrangler.toml if it contains environment-specific values.
+
+[[d1_databases]]
+binding = "DB"
+database_name = "yamaha-router-watch-db"
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+[vars]
+ALERT_FROM = "Yamaha Router Watch <alerts@example.com>"
+ALERT_TO = "admin@example.com"
