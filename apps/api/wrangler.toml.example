@@ -11,5 +11,6 @@ database_name = "yamaha-router-watch-db"
 database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
 [vars]
+ADMIN_API_TOKEN = "dev-admin-token"
 ALERT_FROM = "Yamaha Router Watch <alerts@example.com>"
 ALERT_TO = "admin@example.com"

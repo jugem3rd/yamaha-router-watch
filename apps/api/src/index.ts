@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 type Bindings = {
   DB: D1Database;
+  ADMIN_API_TOKEN?: string;
   ALERT_FROM?: string;
   ALERT_TO?: string;
 };
@@ -41,13 +42,12 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 const requiredEventFields = [
   "device_id",
-  "token",
   "event_type",
   "severity",
   "summary"
 ] as const;
 
-const requiredHeartbeatFields = ["device_id", "token", "status"] as const;
+const requiredHeartbeatFields = ["device_id", "status"] as const;
 
 app.get("/", (c) => {
   return c.json({
@@ -70,7 +70,7 @@ app.post("/api/v1/events", async (c) => {
     return c.json({ ok: false, error: validationError }, 400);
   }
 
-  const auth = await authenticateDevice(c.env.DB, payload.value);
+  const auth = await authenticateDevice(c.env.DB, c.req.raw, payload.value);
   if (!auth.ok) {
     return c.json({ ok: false, error: auth.error }, auth.status);
   }
@@ -119,7 +119,7 @@ app.post("/api/v1/heartbeat", async (c) => {
     return c.json({ ok: false, error: validationError }, 400);
   }
 
-  const auth = await authenticateDevice(c.env.DB, payload.value);
+  const auth = await authenticateDevice(c.env.DB, c.req.raw, payload.value);
   if (!auth.ok) {
     return c.json({ ok: false, error: auth.error }, auth.status);
   }
@@ -153,6 +153,10 @@ app.post("/api/v1/heartbeat", async (c) => {
 });
 
 app.get("/api/v1/events", async (c) => {
+  if (!authenticateAdmin(c.env, c.req.raw)) {
+    return c.json({ ok: false, error: "invalid_admin_credentials" }, 401);
+  }
+
   const { results } = await c.env.DB.prepare(
     `SELECT
       id,
@@ -176,6 +180,10 @@ app.get("/api/v1/events", async (c) => {
 });
 
 app.get("/api/v1/heartbeats", async (c) => {
+  if (!authenticateAdmin(c.env, c.req.raw)) {
+    return c.json({ ok: false, error: "invalid_admin_credentials" }, 401);
+  }
+
   const { results } = await c.env.DB.prepare(
     `SELECT
       id,
@@ -231,9 +239,12 @@ function validateRequiredFields<T extends Record<string, unknown>>(
 
 async function authenticateDevice(
   db: D1Database,
+  request: Request,
   payload: { device_id?: unknown; token?: unknown }
 ): Promise<{ ok: true } | { ok: false; status: 401 | 403; error: string }> {
-  if (typeof payload.device_id !== "string" || typeof payload.token !== "string") {
+  const token = getBearerToken(request) ?? getBodyToken(payload);
+
+  if (typeof payload.device_id !== "string" || !token) {
     return { ok: false, status: 401, error: "invalid_credentials" };
   }
 
@@ -255,13 +266,46 @@ async function authenticateDevice(
     return { ok: false, status: 403, error: "device_disabled" };
   }
 
-  // MVP placeholder:
-  // Replace this with secure token hash verification before production use.
-  if (device.token_hash !== payload.token) {
+  const tokenHash = await sha256Hex(token);
+  if (device.token_hash !== tokenHash) {
     return { ok: false, status: 401, error: "invalid_credentials" };
   }
 
   return { ok: true };
+}
+
+function authenticateAdmin(env: Bindings, request: Request): boolean {
+  const expectedToken = env.ADMIN_API_TOKEN;
+  const token = getBearerToken(request);
+
+  if (!expectedToken || !token) {
+    return false;
+  }
+
+  return token === expectedToken;
+}
+
+function getBearerToken(request: Request): string | null {
+  const authorization = request.headers.get("Authorization");
+  if (!authorization) {
+    return null;
+  }
+
+  const match = authorization.match(/^Bearer\s+([^\s]+)$/i);
+  if (!match) {
+    return null;
+  }
+
+  return match[1];
+}
+
+function getBodyToken(payload: { token?: unknown }): string | null {
+  if (typeof payload.token !== "string") {
+    return null;
+  }
+
+  const trimmed = payload.token.trim();
+  return trimmed === "" ? null : trimmed;
 }
 
 function asNullableString(value: unknown): string | null {
@@ -275,6 +319,14 @@ function asNullableString(value: unknown): string | null {
 
 function getSourceIp(request: Request): string | null {
   return request.headers.get("CF-Connecting-IP");
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export default app;

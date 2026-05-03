@@ -41,7 +41,7 @@ flowchart LR
 
 ## 現在の状態
 
-Phase 1: Workers API MVP は完了済みです。
+Phase 1: Workers API MVP は完了済みです。現在は Phase 2: Authentication を進行中です。
 
 - Cloudflare Workers API 実装済み
 - Cloudflare D1 migration 作成済み
@@ -49,6 +49,8 @@ Phase 1: Workers API MVP は完了済みです。
 - deployed Workers で event / heartbeat の保存確認済み
 - `source_ip` を観測情報として保存
 - `scripts/` から疑似イベント送信可能
+- device write endpoint は Bearer token 優先、body `token` 互換
+- read endpoint は admin Bearer token 必須
 
 公開検証 URL:
 
@@ -73,8 +75,8 @@ npm run dev
 ```bash
 bash scripts/send-test-event.sh
 bash scripts/send-test-heartbeat.sh
-curl http://localhost:8787/api/v1/events
-curl http://localhost:8787/api/v1/heartbeats
+bash scripts/get-test-events.sh
+bash scripts/get-test-heartbeats.sh
 ```
 
 ローカル D1 にテストデバイスがない場合は、以下を実行します。
@@ -82,6 +84,12 @@ curl http://localhost:8787/api/v1/heartbeats
 ```bash
 cd apps/api
 npx wrangler d1 execute yamaha-router-watch-db --local --command "INSERT OR IGNORE INTO devices (device_id, label, token_hash, enabled) VALUES ('test-rtx1210-001', '検証用 RTX1210', 'test-token', 1);"
+```
+
+Phase 2 以降は `devices.token_hash` に token の SHA-256 hex digest を保存します。`test-token` の hash は以下です。
+
+```text
+4c5dc9b7708905f77f5e5d16316b5dfb425e68cb326dcd55a860e90a7707031e
 ```
 
 ## Cloudflare 環境の作り直し
@@ -102,7 +110,7 @@ npx wrangler d1 execute yamaha-router-watch-db --local --command "INSERT OR IGNO
 cd apps/api
 npx wrangler d1 create yamaha-router-watch-db
 npm run d1:migrate:remote
-npx wrangler d1 execute yamaha-router-watch-db --remote --command "INSERT OR IGNORE INTO devices (device_id, label, token_hash, enabled) VALUES ('test-rtx1210-001', '検証用 RTX1210', 'test-token', 1);"
+npx wrangler d1 execute yamaha-router-watch-db --remote --command "INSERT OR IGNORE INTO devices (device_id, label, token_hash, enabled) VALUES ('test-rtx1210-001', '検証用 RTX1210', '4c5dc9b7708905f77f5e5d16316b5dfb425e68cb326dcd55a860e90a7707031e', 1);"
 npm run deploy
 ```
 
@@ -111,8 +119,8 @@ deployed URL に対する確認:
 ```bash
 API_BASE_URL=https://your-worker-url.example.workers.dev bash scripts/send-test-event.sh
 API_BASE_URL=https://your-worker-url.example.workers.dev bash scripts/send-test-heartbeat.sh
-curl https://your-worker-url.example.workers.dev/api/v1/events
-curl https://your-worker-url.example.workers.dev/api/v1/heartbeats
+API_BASE_URL=https://your-worker-url.example.workers.dev ADMIN_API_TOKEN=your-admin-token bash scripts/get-test-events.sh
+API_BASE_URL=https://your-worker-url.example.workers.dev ADMIN_API_TOKEN=your-admin-token bash scripts/get-test-heartbeats.sh
 ```
 
 `wrangler.toml` は環境依存値を含むためコミットしません。共有するのは `apps/api/wrangler.toml.example` だけです。

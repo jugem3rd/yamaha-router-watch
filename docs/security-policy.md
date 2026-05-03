@@ -16,9 +16,17 @@
 ## Device Authentication
 
 - Each device has a device-specific API token.
-- The MVP compares `devices.token_hash` with the request `token` as a temporary placeholder.
-- Before production, store only secure token hashes and verify using a timing-safe strategy supported by the Workers runtime.
+- Device write endpoints prefer `Authorization: Bearer <device_token>`.
+- The JSON body `token` field remains as a temporary compatibility fallback for Yamaha Lua PoC work.
+- `devices.token_hash` stores the SHA-256 hex digest of the device token.
+- Before production, consider a stronger password hashing or HMAC-based request signing strategy after Yamaha Lua compatibility is verified.
 - Token rotation and revocation should be implemented before customer rollout.
+
+## Administrator Authentication
+
+- `GET /api/v1/events` and `GET /api/v1/heartbeats` require `Authorization: Bearer <admin_api_token>`.
+- `ADMIN_API_TOKEN` is an environment-specific secret and must not be committed.
+- Customer-facing dashboard authentication is out of scope for the current API MVP.
 
 ## Notification Controls
 

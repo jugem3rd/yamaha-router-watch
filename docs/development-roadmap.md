@@ -18,12 +18,13 @@
 - Verify remote D1 migration and deployed Workers API.
 - Document Cloudflare resource recreation steps for a future service-dedicated account.
 
-## Phase 2: Authentication - Next
+## Phase 2: Authentication - In Progress
 
-- Replace MVP plaintext token comparison with secure token hash verification.
+- Replace MVP plaintext token comparison with SHA-256 token hash verification.
+- Prefer `Authorization: Bearer` for device write endpoints while keeping body `token` as a temporary compatibility fallback.
+- Add administrator authentication for read endpoints.
 - Add token rotation flow.
 - Add request rate limiting.
-- Add administrator authentication for read endpoints.
 
 ## Phase 3: Notification - Planned
 

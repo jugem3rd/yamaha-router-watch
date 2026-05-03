@@ -54,8 +54,8 @@ In another terminal from the repository root:
 ```bash
 bash scripts/send-test-event.sh
 bash scripts/send-test-heartbeat.sh
-curl http://localhost:8787/api/v1/events
-curl http://localhost:8787/api/v1/heartbeats
+bash scripts/get-test-events.sh
+bash scripts/get-test-heartbeats.sh
 ```
 
 Remote:
@@ -63,8 +63,8 @@ Remote:
 ```bash
 API_BASE_URL=https://yamaha-router-watch-api.snow1606hawk.workers.dev bash scripts/send-test-event.sh
 API_BASE_URL=https://yamaha-router-watch-api.snow1606hawk.workers.dev bash scripts/send-test-heartbeat.sh
-curl https://yamaha-router-watch-api.snow1606hawk.workers.dev/api/v1/events
-curl https://yamaha-router-watch-api.snow1606hawk.workers.dev/api/v1/heartbeats
+API_BASE_URL=https://yamaha-router-watch-api.snow1606hawk.workers.dev ADMIN_API_TOKEN=your-admin-token bash scripts/get-test-events.sh
+API_BASE_URL=https://yamaha-router-watch-api.snow1606hawk.workers.dev ADMIN_API_TOKEN=your-admin-token bash scripts/get-test-heartbeats.sh
 ```
 
 ## Recreating Cloudflare Resources

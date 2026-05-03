@@ -8,6 +8,7 @@ TEST_DEVICE_TOKEN="${TEST_DEVICE_TOKEN:-test-token}"
 curl -sS \
   -X POST "${API_BASE_URL}/api/v1/heartbeat" \
   -H "content-type: application/json" \
+  -H "authorization: Bearer ${TEST_DEVICE_TOKEN}" \
   --data "{
     \"device_id\": \"${TEST_DEVICE_ID}\",
     \"token\": \"${TEST_DEVICE_TOKEN}\",

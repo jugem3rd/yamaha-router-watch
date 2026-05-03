@@ -49,7 +49,7 @@ INSERT INTO devices (
 ) VALUES (
   'test-rtx1210-001',
   '検証用 RTX1210',
-  'test-token',
+  '4c5dc9b7708905f77f5e5d16316b5dfb425e68cb326dcd55a860e90a7707031e',
   1
 );
 ```
@@ -57,8 +57,10 @@ INSERT INTO devices (
 For local D1, one option is:
 
 ```bash
-npx wrangler d1 execute yamaha-router-watch-db --local --command "INSERT INTO devices (device_id, label, token_hash, enabled) VALUES ('test-rtx1210-001', '検証用 RTX1210', 'test-token', 1);"
+npx wrangler d1 execute yamaha-router-watch-db --local --command "INSERT OR IGNORE INTO devices (device_id, label, token_hash, enabled) VALUES ('test-rtx1210-001', '検証用 RTX1210', '4c5dc9b7708905f77f5e5d16316b5dfb425e68cb326dcd55a860e90a7707031e', 1);"
 ```
+
+`token_hash` stores the SHA-256 hex digest of the device token. The test hash above is for `test-token`.
 
 ## Local Verification
 
@@ -67,8 +69,8 @@ From the repository root, while `npm run dev` is running:
 ```bash
 bash scripts/send-test-event.sh
 bash scripts/send-test-heartbeat.sh
-curl http://localhost:8787/api/v1/events
-curl http://localhost:8787/api/v1/heartbeats
+bash scripts/get-test-events.sh
+bash scripts/get-test-heartbeats.sh
 ```
 
 The POST responses should include `event_id` or `heartbeat_id`.
@@ -91,7 +93,7 @@ npm run deploy
 Insert the test device into remote D1:
 
 ```bash
-npx wrangler d1 execute yamaha-router-watch-db --remote --command "INSERT OR IGNORE INTO devices (device_id, label, token_hash, enabled) VALUES ('test-rtx1210-001', '検証用 RTX1210', 'test-token', 1);"
+npx wrangler d1 execute yamaha-router-watch-db --remote --command "INSERT OR IGNORE INTO devices (device_id, label, token_hash, enabled) VALUES ('test-rtx1210-001', '検証用 RTX1210', '4c5dc9b7708905f77f5e5d16316b5dfb425e68cb326dcd55a860e90a7707031e', 1);"
 ```
 
 Verify the deployed Worker from the repository root:
@@ -99,8 +101,8 @@ Verify the deployed Worker from the repository root:
 ```bash
 API_BASE_URL=https://your-worker-url.example.workers.dev bash scripts/send-test-event.sh
 API_BASE_URL=https://your-worker-url.example.workers.dev bash scripts/send-test-heartbeat.sh
-curl https://your-worker-url.example.workers.dev/api/v1/events
-curl https://your-worker-url.example.workers.dev/api/v1/heartbeats
+API_BASE_URL=https://your-worker-url.example.workers.dev ADMIN_API_TOKEN=your-admin-token bash scripts/get-test-events.sh
+API_BASE_URL=https://your-worker-url.example.workers.dev ADMIN_API_TOKEN=your-admin-token bash scripts/get-test-heartbeats.sh
 ```
 
 ## Recreating Cloudflare Resources
@@ -112,6 +114,7 @@ Keep these values account-specific:
 - `database_id` in `wrangler.toml`
 - deployed Workers URL
 - Cloudflare API tokens
+- `ADMIN_API_TOKEN`
 - future custom domain or route settings
 
 Do not commit `wrangler.toml` after setting account-specific values.

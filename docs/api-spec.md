@@ -28,10 +28,14 @@ Receives a summarized router event.
 Required fields:
 
 - `device_id`
-- `token`
 - `event_type`
 - `severity`
 - `summary`
+
+Authentication:
+
+- Preferred: `Authorization: Bearer <device_token>`
+- Compatibility fallback: JSON body `token`
 
 Request:
 
@@ -63,8 +67,12 @@ Receives a router heartbeat snapshot.
 Required fields:
 
 - `device_id`
-- `token`
 - `status`
+
+Authentication:
+
+- Preferred: `Authorization: Bearer <device_token>`
+- Compatibility fallback: JSON body `token`
 
 Request:
 
@@ -92,6 +100,12 @@ Response:
 
 Returns the latest 50 events.
 
+Requires administrator authentication:
+
+```http
+Authorization: Bearer <admin_api_token>
+```
+
 Response:
 
 ```json
@@ -116,6 +130,12 @@ Response:
 ## GET /api/v1/heartbeats
 
 Returns the latest 50 heartbeats.
+
+Requires administrator authentication:
+
+```http
+Authorization: Bearer <admin_api_token>
+```
 
 Response:
 
@@ -146,3 +166,11 @@ Response:
 ## Source IP
 
 `source_ip` is observed by Workers from Cloudflare's `CF-Connecting-IP` header and stored as diagnostic metadata. It can help identify WAN IP changes or unexpected uplink paths, but it should not be treated as an authentication factor.
+
+## Authentication
+
+Device write endpoints prefer Bearer token authentication. The body `token` field remains supported as a temporary compatibility path for Yamaha Lua PoC work.
+
+The API stores SHA-256 hex digests in `devices.token_hash`, not plaintext device tokens.
+
+Read endpoints are operator-facing and require `ADMIN_API_TOKEN` via Bearer token.
