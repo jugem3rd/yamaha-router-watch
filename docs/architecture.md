@@ -4,13 +4,18 @@ Yamaha Router Watch is a lightweight monitoring MVP for Yamaha RTX / NVR routers
 
 ## Overview
 
-```text
-Yamaha Router Lua
-  -> HTTPS POST
-  -> Cloudflare Workers API
-  -> Cloudflare D1
-  -> Resend notifications
-  -> Cloudflare Pages dashboard
+```mermaid
+flowchart LR
+  Router[Yamaha Router<br/>Lua script]
+  Workers[Cloudflare Workers<br/>API]
+  D1[(Cloudflare D1)]
+  Resend[Resend<br/>email notifications]
+  Pages[Cloudflare Pages<br/>dashboard]
+
+  Router -->|HTTPS POST<br/>events / heartbeats| Workers
+  Workers -->|validate and store| D1
+  Workers -. planned alerts .-> Resend
+  Pages -. planned reads .-> Workers
 ```
 
 The router sends summarized events and heartbeat snapshots. The service does not send raw syslog streams or full router configuration output.
@@ -25,6 +30,21 @@ The router sends summarized events and heartbeat snapshots. The service does not
 
 ## Event Flow
 
+```mermaid
+sequenceDiagram
+  participant Lua as Yamaha Router Lua
+  participant API as Cloudflare Workers API
+  participant DB as Cloudflare D1
+  participant Mail as Resend
+
+  Lua->>API: POST /api/v1/events
+  API->>API: Validate payload and device token
+  API->>API: Observe source_ip from CF-Connecting-IP
+  API->>DB: INSERT events
+  API-->>Lua: 200 { ok, event_id }
+  API-->>Mail: Planned notification for alert-worthy events
+```
+
 1. Lua checks WAN, PPPoE, tunnel, IPsec, log, or environment status.
 2. Lua detects a meaningful state change or alert-worthy condition.
 3. Lua sends `POST /api/v1/events` with a summary event.
@@ -33,6 +53,19 @@ The router sends summarized events and heartbeat snapshots. The service does not
 6. Later phases will evaluate notification rules and send email.
 
 ## Heartbeat Flow
+
+```mermaid
+sequenceDiagram
+  participant Lua as Yamaha Router Lua
+  participant API as Cloudflare Workers API
+  participant DB as Cloudflare D1
+
+  Lua->>API: POST /api/v1/heartbeat
+  API->>API: Validate payload and device token
+  API->>API: Observe source_ip from CF-Connecting-IP
+  API->>DB: INSERT heartbeats
+  API-->>Lua: 200 { ok, heartbeat_id }
+```
 
 1. Lua periodically gathers a small status snapshot.
 2. Lua sends `POST /api/v1/heartbeat`.
